@@ -16,6 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+var assign = require('object-assign');
+var Dispatcher = require('./dispatcher');
+var Dispatch = assign({}, Dispatcher.prototype,{});
+var React = require('react');
+var ReactDom = require('react-dom');
+var $ = require('jquery');
+var MenuBar=require('./menubar');
 var app = {
     // Application Constructor
     initialize: function() {
@@ -34,6 +41,10 @@ var app = {
     // function, we must explicitly call 'app.receivedEvent(...);'
     onDeviceReady: function() {
         app.receivedEvent('deviceready');
+        ReactDom.render(
+        <MenuBar/>,
+           document.getElementById('menubar')
+        );
     },
     // Update DOM on a Received Event
     receivedEvent: function(id) {
