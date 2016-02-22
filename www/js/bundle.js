@@ -73,6 +73,7 @@ var app = {
     onDeviceReady: function () {
         app.receivedEvent('deviceready');
         ReactDom.render(React.createElement(MenuBar, null), document.getElementById('menubar'));
+        console.log("YAHOOO!!!!\n");
     },
     // Update DOM on a Received Event
     receivedEvent: function (id) {
@@ -86,6 +87,8 @@ var app = {
         console.log('Received Event: ' + id);
     }
 };
+
+app.initialize();
 
 },{"./dispatcher":1,"./menubar":3,"jquery":5,"object-assign":6,"react":163,"react-dom":7}],3:[function(require,module,exports){
 'use strict';
