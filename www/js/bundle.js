@@ -53,8 +53,12 @@ var Dispatch = assign({}, Dispatcher.prototype, {});
 var React = require('react');
 var ReactDom = require('react-dom');
 var $ = require('jquery');
+// for version 2
+//var DB = require('ydn.db');
 var MenuBar = require('./menubar');
 var Register = require('./register');
+var db;
+var dbCreated = false;
 var app = {
     // Application Constructor
     initialize: function () {
@@ -85,10 +89,52 @@ var app = {
 
         //listeningElement.setAttribute('style', 'display:none;');
         //receivedElement.setAttribute('style', 'display:block;');
-        $('#deviceready').hide();
-        $('#Register').fadeIn();
         console.log('Received Event: ' + id);
-    }
+        $('#deviceready').hide();
+        app.openDatabase();
+    },
+    openDatabase: function () {
+        console.log("openDatabase called");
+        //defaulting to 100K for now.
+        db = window.openDatabase("DoItGym", "1.0", "User Details", 100000);
+        db.transaction(this.createDatabase, this.transactionError, this.selectUser);
+        console.log("openDatabase Done");
+    },
+    createDatabase: function (tx) {
+        console.log("createDatabase called");
+        tx.executeSql("CREATE TABLE IF NOT EXISTS user_details (email VARCHAR(100), password VARCHAR(100))");
+        console.log("createDatabase Done");
+    },
+    transactionError: function (tx, error) {
+        console.log("Database Error:" + error);
+    },
+    selectUser: function () {
+        console.log("selectUser called");
+        //selectUserData will trigger the success function directly
+        db.transaction(app.selectUserData, app.transactionError);
+        console.log("selectUser Done");
+    },
+    selectUserData: function (tx) {
+        console.log("selectUserData called");
+        // There should only be one entry
+        tx.executeSql("SELECT * FROM user_details", [], app.selectUserResult);
+        console.log("selectUserData Done");
+    },
+    selectUserResult: function (tx, result) {
+        console.log("selectUserResult called");
+        // Tell the world that we have a database
+        Dispatch.dispatch("DATABASE_FOUND", db);
+        if (result.rows.length == 1) {
+            // Found the user, now try and login using the password and email
+            this.login(result.rows.item(0).email, result.rows.item(0).password);
+        } else {
+            // something went wrong, need to re-register
+            console.log("Found " + result.rows.length + " entry");
+            // should popup the registration screen
+            Dispatch.dispatch("REGISTRATION_REQD");
+        }
+    },
+    login: function (email, password) {}
 };
 
 app.initialize();
@@ -43974,7 +44020,29 @@ var Dispatch = assign({}, Dispatcher.prototype, {});
 var React = require('react');
 var ReactDom = require('react-dom');
 var $ = require('jquery');
+var DB;
 require('jquery-ui');
+function showRegisterTab(data) {
+  $('#Register').fadeIn();
+}
+function sendEmail() {
+  $.ajax({
+    url: 'https://python-doitgym.rhcloud.com/register/register/',
+    method: 'POST',
+    data: { name: $('.register-input').val() },
+    cache: false,
+    success: function (data, stat, obj) {
+      Dispatch.dispatch('EMAIL_VERIFICATION_SENT');
+    },
+    timeout: 2000,
+    error: function (data, stat, obj) {}
+  });
+}
+
+function updateDB(data) {
+  DB = data;
+}
+
 var Register = React.createClass({
   displayName: 'Register',
 
@@ -43983,10 +44051,12 @@ var Register = React.createClass({
   },
 
   componentDidMount: function () {
+    Dispatch.register("REGISTRATION_REQD", showRegisterTab);
+    Dispatch.register("DATABASE_FOUND", updateDB);
     $('.register-input').keypress(function (event) {
       var keyCode = event.keyCode ? event.keyCode : event.which;
       if (keyCode == '13') {
-        console.log("Pressed Enter");
+        sendEmail();
       }
     });
   },
@@ -44002,7 +44072,26 @@ var Register = React.createClass({
     return React.createElement(
       'div',
       { className: 'register' },
-      React.createElement('input', { className: 'register-input', type: 'text', name: 'email', placeholder: 'Your Email' })
+      React.createElement('input', { className: 'register-input', type: 'text', name: 'email', placeholder: 'Your Email' }),
+      React.createElement('input', { className: 'register-passwd', type: 'password', name: 'passwd', placeholder: 'Password' }),
+      React.createElement(
+        'div',
+        { className: 'register-span' },
+        React.createElement(
+          'span',
+          null,
+          '*New User? Choose a new password'
+        )
+      ),
+      React.createElement(
+        'div',
+        { className: 'register-buttons' },
+        React.createElement(
+          'button',
+          { className: 'signin', type: 'button' },
+          'Lets Go!'
+        )
+      )
     );
   }
 });
